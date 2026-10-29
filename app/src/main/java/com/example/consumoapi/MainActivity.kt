@@ -34,10 +34,12 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.input.KeyboardCapitalization
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import com.example.consumoapi.components.CepVisualTransformation
 import com.example.consumoapi.model.Endereco
 import com.example.consumoapi.service.RetrofitFactory
 import com.example.consumoapi.ui.theme.ConsumoAPITheme
@@ -72,6 +74,8 @@ fun CepScreen(modifier: Modifier = Modifier) {
     var listaEnderecosState by remember {
         mutableStateOf(listOf<Endereco>())
     }
+
+
 
     Column(
         modifier = modifier.fillMaxWidth()
@@ -110,15 +114,40 @@ fun CepScreen(modifier: Modifier = Modifier) {
                     onValueChange = { cepState = it },
                     modifier = Modifier.fillMaxWidth(),
                     label = { Text(text = "Qual CEP está buscando?") },
+                    placeholder = { Text(text = "00000-000", color = Color.Gray) },
                     trailingIcon = {
-                        IconButton( onClick = { /* TODO */ } ) {
+                        IconButton(onClick = {
+                            val call = RetrofitFactory().getEnderecoService()
+                                .getEnderecoByCep(cepState)
+
+                            call.enqueue(object : Callback<Endereco> {
+                                override fun onResponse(
+                                    call: Call<Endereco>,
+                                    response: Response<Endereco>
+                                ) {
+                                    Log.i("TESTE", "${ response.body() }")
+
+                                    val enderecoEncontrado = response.body()!!
+
+                                    listaEnderecosState = listOf(enderecoEncontrado)
+                                }
+
+                                override fun onFailure(
+                                    call: Call<Endereco>,
+                                    t: Throwable) {
+                                    Log.i("TESTE", "${ t.message }")
+                                }
+                            })
+                        }) {
                             Icon(
                                 imageVector = Icons.Default.Search,
                                 contentDescription = ""
                             )
                         }
                     },
-                    keyboardOptions = KeyboardOptions( keyboardType = KeyboardType.Number )
+                    keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
+                    visualTransformation = CepVisualTransformation(),
+                    singleLine = true
                 )
 
                 Row() {
@@ -131,8 +160,10 @@ fun CepScreen(modifier: Modifier = Modifier) {
                         label = { Text( text = "UF?" ) },
                         keyboardOptions = KeyboardOptions(
                             keyboardType = KeyboardType.Text,
-                            capitalization = KeyboardCapitalization.Characters
-                        )
+                            capitalization = KeyboardCapitalization.Characters,
+                            imeAction = ImeAction.Next
+                        ),
+                        singleLine = true
                     )
 
                     Spacer(modifier = Modifier.height(8.dp))
@@ -144,8 +175,10 @@ fun CepScreen(modifier: Modifier = Modifier) {
                         label = { Text( text = "Qual a cidade?" ) },
                         keyboardOptions = KeyboardOptions(
                             keyboardType = KeyboardType.Text,
-                            capitalization = KeyboardCapitalization.Words
-                        )
+                            capitalization = KeyboardCapitalization.Words,
+                            imeAction = ImeAction.Next
+                        ),
+                        singleLine = true
                     )
                 }
 
@@ -157,8 +190,10 @@ fun CepScreen(modifier: Modifier = Modifier) {
                         label = { Text(text = "Qual o nome da rua?") },
                         keyboardOptions = KeyboardOptions(
                             keyboardType = KeyboardType.Text,
-                            capitalization = KeyboardCapitalization.Words
-                        )
+                            capitalization = KeyboardCapitalization.Words,
+                            imeAction = ImeAction.Done
+                        ),
+                        singleLine = true
                     )
 
                     IconButton( onClick = {
@@ -174,8 +209,9 @@ fun CepScreen(modifier: Modifier = Modifier) {
                                 call: Call<List<Endereco>>,
                                 response: Response<List<Endereco>>
                             ) {
-                                Log.i("TESTE", "${ response.body() }")
-                                listaEnderecosState = response.body()!!
+//                                Log.i("TESTE", "${ response.body() }")
+
+                                listaEnderecosState = response.body() ?: emptyList()
                             }
 
                             override fun onFailure(
@@ -213,14 +249,15 @@ fun CardEndereco(endereco: Endereco) {
             .padding(bottom = 4.dp)
     ) {
         Column(
-            modifier = Modifier.fillMaxWidth()
+            modifier = Modifier
+                .fillMaxWidth()
                 .padding(8.dp)
         ) {
-            Text(text = "CEP:")
-            Text(text = "Rua:")
-            Text(text = "Cidade:")
-            Text(text = "Bairro:")
-            Text(text = "UF:")
+            Text(text = "CEP: ${endereco.cep}")
+            Text(text = "Rua: ${endereco.rua}")
+            Text(text = "Cidade: ${endereco.cidade}")
+            Text(text = "Bairro: ${endereco.bairro}")
+            Text(text = "UF: ${endereco.uf}")
         }
     }
 }
